@@ -4,10 +4,15 @@ import type { Formateur, Discipline, Conge } from "./src/types.ts";
 
 // Load dotenv just in case db.ts is loaded standalone
 import dotenv from "dotenv";
-dotenv.config();
+const envLocalPath = path.join(process.cwd(), ".env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+} else {
+  dotenv.config();
+}
 
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const isKvConfigured = !!(KV_URL && KV_TOKEN);
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "db.json");

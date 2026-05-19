@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-slate-50: #f8fafc;
 }
@@ -7,18 +9,30 @@
 body {
   font-family: 'Inter', -apple-system, sans-serif;
   background-color: #F8FAFC;
+  color: #0F172A;
   margin: 0;
   overflow: hidden;
+  transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark body {
+  background-color: #090d16;
+  color: #F8FAFC;
 }
 
 .conflict-pulse {
-  border: 1px solid #EF4444 !important;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: border-glow-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes border-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.5) !important;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+    border-color: rgba(239, 68, 68, 0.95) !important;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {
