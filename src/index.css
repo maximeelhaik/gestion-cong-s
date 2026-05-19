@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-50: #f8fafc;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: #F8FAFC;
+  margin: 0;
+  overflow: hidden;
+}
+
+.conflict-pulse {
+  border: 1px solid #EF4444 !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

@@ -1,0 +1,54 @@
+{
+  "formateurs": [
+    {
+      "id": "1",
+      "nom": "Alice Dupont",
+      "disciplines": [
+        "d1",
+        "d2"
+      ]
+    },
+    {
+      "id": "2",
+      "nom": "Marc Lemaire",
+      "disciplines": [
+        "d1"
+      ]
+    },
+    {
+      "id": "3",
+      "nom": "Sophie Martin",
+      "disciplines": [
+        "d3"
+      ]
+    }
+  ],
+  "disciplines": [
+    {
+      "id": "d1",
+      "nom": "Développement Web",
+      "colorHex": "#3b82f6"
+    },
+    {
+      "id": "d2",
+      "nom": "Data Science",
+      "colorHex": "#10b981"
+    },
+    {
+      "id": "d3",
+      "nom": "DevOps",
+      "colorHex": "#f59e0b"
+    }
+  ],
+  "conges": [
+    {
+      "id": "c1",
+      "formateurId": "1",
+      "disciplineId": "d1",
+      "dateDebut": "2026-05-10",
+      "dateFin": "2026-05-15",
+      "commentaire": "Vacances printemps",
+      "aConflit": false
+    }
+  ]
+}
