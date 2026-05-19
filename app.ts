@@ -46,7 +46,7 @@ app.get("/api/formateurs", async (req, res) => {
 
 app.post("/api/formateurs", async (req, res) => {
   try {
-    const { nom, disciplines: newDisciplines } = req.body;
+    const { nom, disciplines: newDisciplines } = req.body || {};
     if (!nom || !nom.trim()) {
       return res.status(400).json({ error: "Le nom du formateur est requis" });
     }
@@ -78,7 +78,7 @@ app.get("/api/disciplines", async (req, res) => {
 
 app.post("/api/disciplines", async (req, res) => {
   try {
-    const { nom, colorHex } = req.body;
+    const { nom, colorHex } = req.body || {};
     if (!nom || !nom.trim()) {
       return res.status(400).json({ error: "Le nom de la discipline est requis" });
     }
@@ -110,7 +110,7 @@ app.get("/api/conges", async (req, res) => {
 
 app.post("/api/conges", async (req, res) => {
   try {
-    const { formateurId, disciplineId, periods, commentaire } = req.body;
+    const { formateurId, disciplineId, periods, commentaire } = req.body || {};
     
     if (!formateurId || !disciplineId || !periods || !Array.isArray(periods)) {
       return res.status(400).json({ error: "Payload invalide" });
