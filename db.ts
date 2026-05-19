@@ -13,7 +13,16 @@ if (fs.existsSync(envLocalPath)) {
 
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const isKvConfigured = !!(KV_URL && KV_TOKEN);
+
+// Verify if the KV REST URL is a valid HTTP/HTTPS URL
+const isValidHttpUrl = !!(KV_URL && (KV_URL.startsWith("http://") || KV_URL.startsWith("https://")));
+
+if (KV_URL && !isValidHttpUrl) {
+  console.warn(`[DB] Warning: KV_REST_API_URL (${KV_URL}) does not start with http:// or https://. It cannot be used with fetch REST queries. Falling back to local file db.`);
+}
+
+const isKvConfigured = !!(KV_URL && KV_TOKEN && isValidHttpUrl);
+
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "db.json");
 
@@ -53,6 +62,12 @@ async function kvFetch(command: any[]) {
     },
     body: JSON.stringify(command),
   });
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`HTTP Error ${response.status}: ${text || response.statusText}`);
+  }
+  
   const data = await response.json();
   if (data.error) {
     throw new Error(`Vercel KV Error: ${data.error}`);
@@ -120,8 +135,14 @@ export async function initDb() {
 // --- Getter and Setter Functions ---
 export async function getFormateurs(): Promise<Formateur[]> {
   if (isKvConfigured) {
-    const res = await kvFetch(["GET", "academy_formateurs"]);
-    return res ? JSON.parse(res) : DEFAULT_FORMATEURS;
+    try {
+      const res = await kvFetch(["GET", "academy_formateurs"]);
+      return res ? JSON.parse(res) : DEFAULT_FORMATEURS;
+    } catch (err: any) {
+      console.error("[DB Fallback] getFormateurs KV call failed. Falling back to local file db. Error:", err.message);
+      const db = readLocalDb();
+      return db.formateurs || DEFAULT_FORMATEURS;
+    }
   } else {
     const db = readLocalDb();
     return db.formateurs || DEFAULT_FORMATEURS;
@@ -130,7 +151,14 @@ export async function getFormateurs(): Promise<Formateur[]> {
 
 export async function saveFormateurs(formateurs: Formateur[]): Promise<void> {
   if (isKvConfigured) {
-    await kvFetch(["SET", "academy_formateurs", JSON.stringify(formateurs)]);
+    try {
+      await kvFetch(["SET", "academy_formateurs", JSON.stringify(formateurs)]);
+    } catch (err: any) {
+      console.error("[DB Fallback] saveFormateurs KV call failed. Saving to local file db. Error:", err.message);
+      const db = readLocalDb();
+      db.formateurs = formateurs;
+      writeLocalDb(db);
+    }
   } else {
     const db = readLocalDb();
     db.formateurs = formateurs;
@@ -140,8 +168,14 @@ export async function saveFormateurs(formateurs: Formateur[]): Promise<void> {
 
 export async function getDisciplines(): Promise<Discipline[]> {
   if (isKvConfigured) {
-    const res = await kvFetch(["GET", "academy_disciplines"]);
-    return res ? JSON.parse(res) : DEFAULT_DISCIPLINES;
+    try {
+      const res = await kvFetch(["GET", "academy_disciplines"]);
+      return res ? JSON.parse(res) : DEFAULT_DISCIPLINES;
+    } catch (err: any) {
+      console.error("[DB Fallback] getDisciplines KV call failed. Falling back to local file db. Error:", err.message);
+      const db = readLocalDb();
+      return db.disciplines || DEFAULT_DISCIPLINES;
+    }
   } else {
     const db = readLocalDb();
     return db.disciplines || DEFAULT_DISCIPLINES;
@@ -150,7 +184,14 @@ export async function getDisciplines(): Promise<Discipline[]> {
 
 export async function saveDisciplines(disciplines: Discipline[]): Promise<void> {
   if (isKvConfigured) {
-    await kvFetch(["SET", "academy_disciplines", JSON.stringify(disciplines)]);
+    try {
+      await kvFetch(["SET", "academy_disciplines", JSON.stringify(disciplines)]);
+    } catch (err: any) {
+      console.error("[DB Fallback] saveDisciplines KV call failed. Saving to local file db. Error:", err.message);
+      const db = readLocalDb();
+      db.disciplines = disciplines;
+      writeLocalDb(db);
+    }
   } else {
     const db = readLocalDb();
     db.disciplines = disciplines;
@@ -160,8 +201,14 @@ export async function saveDisciplines(disciplines: Discipline[]): Promise<void> 
 
 export async function getConges(): Promise<Conge[]> {
   if (isKvConfigured) {
-    const res = await kvFetch(["GET", "academy_conges"]);
-    return res ? JSON.parse(res) : DEFAULT_CONGES;
+    try {
+      const res = await kvFetch(["GET", "academy_conges"]);
+      return res ? JSON.parse(res) : DEFAULT_CONGES;
+    } catch (err: any) {
+      console.error("[DB Fallback] getConges KV call failed. Falling back to local file db. Error:", err.message);
+      const db = readLocalDb();
+      return db.conges || DEFAULT_CONGES;
+    }
   } else {
     const db = readLocalDb();
     return db.conges || DEFAULT_CONGES;
@@ -170,7 +217,14 @@ export async function getConges(): Promise<Conge[]> {
 
 export async function saveConges(conges: Conge[]): Promise<void> {
   if (isKvConfigured) {
-    await kvFetch(["SET", "academy_conges", JSON.stringify(conges)]);
+    try {
+      await kvFetch(["SET", "academy_conges", JSON.stringify(conges)]);
+    } catch (err: any) {
+      console.error("[DB Fallback] saveConges KV call failed. Saving to local file db. Error:", err.message);
+      const db = readLocalDb();
+      db.conges = conges;
+      writeLocalDb(db);
+    }
   } else {
     const db = readLocalDb();
     db.conges = conges;
