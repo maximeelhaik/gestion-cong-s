@@ -16,6 +16,89 @@ app.use(express.json());
 // Initialize database
 initDb().catch((err) => console.error("[DB Init Error]", err));
 
+// Diagnostic endpoint to check environment variables and test Upstash connection
+app.get("/api/diagnose", async (req, res) => {
+  try {
+    const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    
+    function cleanEnvValue(val: string | undefined): string | undefined {
+      if (!val) return undefined;
+      let s = val.trim();
+      if (s.startsWith('"') && s.endsWith('"')) {
+        s = s.slice(1, -1);
+      }
+      if (s.startsWith("'") && s.endsWith("'")) {
+        s = s.slice(1, -1);
+      }
+      return s.trim();
+    }
+
+    const cleanUrl = cleanEnvValue(KV_URL);
+    const cleanToken = cleanEnvValue(KV_TOKEN);
+
+    const hasUrl = !!cleanUrl;
+    const hasToken = !!cleanToken;
+
+    let urlInfo = cleanUrl ? `${cleanUrl.substring(0, 18)}...` : "missing";
+    let tokenInfo = cleanToken ? `present (length: ${cleanToken.length})` : "missing";
+
+    let testResult = "Not attempted";
+    let testError = null;
+
+    if (hasUrl && hasToken) {
+      try {
+        const start = Date.now();
+        const response = await fetch(cleanUrl!, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${cleanToken!}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(["PING"]),
+        });
+        const duration = Date.now() - start;
+        if (response.ok) {
+          const json = await response.json();
+          testResult = `Success! PING returned: ${JSON.stringify(json)} (took ${duration}ms)`;
+        } else {
+          const txt = await response.text();
+          testResult = `HTTP Error ${response.status}: ${txt}`;
+        }
+      } catch (err: any) {
+        testResult = "Fetch Failed";
+        testError = {
+          message: err.message,
+          stack: err.stack,
+          cause: err.cause ? {
+            message: err.cause.message,
+            code: err.cause.code,
+            syscall: err.cause.syscall,
+          } : null
+        };
+      }
+    }
+
+    res.json({
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        hasKV_REST_API_URL: !!process.env.KV_REST_API_URL,
+        hasUPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+        hasKV_REST_API_TOKEN: !!process.env.KV_REST_API_TOKEN,
+        hasUPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+        resolvedUrlPrefix: urlInfo,
+        resolvedTokenStatus: tokenInfo,
+      },
+      test: {
+        result: testResult,
+        error: testError,
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- API Routes ---
 
 // Get all baseline data for hydration

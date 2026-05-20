@@ -11,8 +11,20 @@ if (fs.existsSync(envLocalPath)) {
   dotenv.config();
 }
 
-const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+function cleanEnvValue(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  let s = val.trim();
+  if (s.startsWith('"') && s.endsWith('"')) {
+    s = s.slice(1, -1);
+  }
+  if (s.startsWith("'") && s.endsWith("'")) {
+    s = s.slice(1, -1);
+  }
+  return s.trim();
+}
+
+const KV_URL = cleanEnvValue(process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL);
+const KV_TOKEN = cleanEnvValue(process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN);
 
 if (!KV_URL || !KV_TOKEN) {
   console.error("[DB] Error: Upstash / Vercel KV environment variables (KV_REST_API_URL, KV_REST_API_TOKEN) are missing!");
