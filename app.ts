@@ -1,5 +1,6 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
+import { Redis } from "@upstash/redis";
 import {
   initDb,
   getFormateurs,
@@ -48,32 +49,18 @@ app.get("/api/diagnose", async (req, res) => {
     if (hasUrl && hasToken) {
       try {
         const start = Date.now();
-        const response = await fetch(cleanUrl!, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${cleanToken!}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(["PING"]),
+        const testRedis = new Redis({
+          url: cleanUrl || "",
+          token: cleanToken || "",
         });
+        const pong = await testRedis.ping();
         const duration = Date.now() - start;
-        if (response.ok) {
-          const json = await response.json();
-          testResult = `Success! PING returned: ${JSON.stringify(json)} (took ${duration}ms)`;
-        } else {
-          const txt = await response.text();
-          testResult = `HTTP Error ${response.status}: ${txt}`;
-        }
+        testResult = `Success! Ping returned: "${pong}" (took ${duration}ms)`;
       } catch (err: any) {
-        testResult = "Fetch Failed";
+        testResult = "SDK Connection Failed";
         testError = {
           message: err.message,
           stack: err.stack,
-          cause: err.cause ? {
-            message: err.cause.message,
-            code: err.cause.code,
-            syscall: err.cause.syscall,
-          } : null
         };
       }
     }

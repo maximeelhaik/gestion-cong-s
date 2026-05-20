@@ -1,4 +1,5 @@
 import type { Formateur, Discipline, Conge } from "./src/types";
+import { Redis } from "@upstash/redis";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -30,6 +31,11 @@ if (!KV_URL || !KV_TOKEN) {
   console.error("[DB] Error: Upstash / Vercel KV environment variables (KV_REST_API_URL, KV_REST_API_TOKEN) are missing!");
 }
 
+const redis = new Redis({
+  url: KV_URL || "",
+  token: KV_TOKEN || "",
+});
+
 // --- Seed Data ---
 const DEFAULT_FORMATEURS: Formateur[] = [
   { id: "1", nom: "Alice Dupont", disciplines: ["d1", "d2"] },
@@ -55,39 +61,6 @@ const DEFAULT_CONGES: Conge[] = [
   },
 ];
 
-// --- Upstash REST API Client ---
-async function kvFetch(command: any[]) {
-  if (!KV_URL || !KV_TOKEN) {
-    throw new Error("Base de données Upstash non configurée. Vérifiez les variables d'environnement.");
-  }
-  
-  // Ensure the URL starts with https:// (Upstash REST API requires HTTPS)
-  let url = KV_URL.trim();
-  if (url.startsWith("redis://") || url.startsWith("rediss://")) {
-    throw new Error(`Format d'URL invalide pour REST API Upstash (${url}). Utilisez l'URL HTTPS REST.`);
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${KV_TOKEN.trim()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(command),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`HTTP Error ${response.status}: ${text || response.statusText}`);
-  }
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`Upstash API Error: ${data.error}`);
-  }
-  return data.result;
-}
-
 let isDbInitialized = false;
 
 async function ensureDbInitialized() {
@@ -100,12 +73,12 @@ async function ensureDbInitialized() {
 export async function initDb() {
   console.log("[DB] Initializing database connection to Upstash Redis...");
   try {
-    const exists = await kvFetch(["EXISTS", "academy_formateurs"]);
+    const exists = await redis.exists("academy_formateurs");
     if (exists === 0) {
       console.log("[DB] Database is empty. Seeding Upstash Redis with default initial data...");
-      await kvFetch(["SET", "academy_formateurs", JSON.stringify(DEFAULT_FORMATEURS)]);
-      await kvFetch(["SET", "academy_disciplines", JSON.stringify(DEFAULT_DISCIPLINES)]);
-      await kvFetch(["SET", "academy_conges", JSON.stringify(DEFAULT_CONGES)]);
+      await redis.set("academy_formateurs", DEFAULT_FORMATEURS);
+      await redis.set("academy_disciplines", DEFAULT_DISCIPLINES);
+      await redis.set("academy_conges", DEFAULT_CONGES);
       console.log("[DB] Seeding completed successfully.");
     } else {
       console.log("[DB] Connection successful. Existing data found in Upstash.");
@@ -119,34 +92,33 @@ export async function initDb() {
 // --- Getter and Setter Functions ---
 export async function getFormateurs(): Promise<Formateur[]> {
   await ensureDbInitialized();
-  const res = await kvFetch(["GET", "academy_formateurs"]);
-  return res ? JSON.parse(res) : DEFAULT_FORMATEURS;
+  const res = await redis.get<Formateur[]>("academy_formateurs");
+  return res || DEFAULT_FORMATEURS;
 }
 
 export async function saveFormateurs(formateurs: Formateur[]): Promise<void> {
   await ensureDbInitialized();
-  await kvFetch(["SET", "academy_formateurs", JSON.stringify(formateurs)]);
+  await redis.set("academy_formateurs", formateurs);
 }
 
 export async function getDisciplines(): Promise<Discipline[]> {
   await ensureDbInitialized();
-  const res = await kvFetch(["GET", "academy_disciplines"]);
-  return res ? JSON.parse(res) : DEFAULT_DISCIPLINES;
+  const res = await redis.get<Discipline[]>("academy_disciplines");
+  return res || DEFAULT_DISCIPLINES;
 }
 
 export async function saveDisciplines(disciplines: Discipline[]): Promise<void> {
   await ensureDbInitialized();
-  await kvFetch(["SET", "academy_disciplines", JSON.stringify(disciplines)]);
+  await redis.set("academy_disciplines", disciplines);
 }
 
 export async function getConges(): Promise<Conge[]> {
   await ensureDbInitialized();
-  const res = await kvFetch(["GET", "academy_conges"]);
-  return res ? JSON.parse(res) : DEFAULT_CONGES;
+  const res = await redis.get<Conge[]>("academy_conges");
+  return res || DEFAULT_CONGES;
 }
 
 export async function saveConges(conges: Conge[]): Promise<void> {
   await ensureDbInitialized();
-  await kvFetch(["SET", "academy_conges", JSON.stringify(conges)]);
+  await redis.set("academy_conges", conges);
 }
-
