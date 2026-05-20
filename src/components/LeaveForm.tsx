@@ -27,11 +27,16 @@ export default function LeaveForm({ formateurs, disciplines, onRefreshData, isDa
   const [isAddingFormateur, setIsAddingFormateur] = useState(false);
   const [newFormateurName, setNewFormateurName] = useState("");
   const [newFormateurDisciplines, setNewFormateurDisciplines] = useState<string[]>([]);
+  
+  const [isConfirmingDeleteFormateur, setIsConfirmingDeleteFormateur] = useState(false);
+  const [isDeletingFormateur, setIsDeletingFormateur] = useState(false);
 
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>("");
   const [isAddingDiscipline, setIsAddingDiscipline] = useState(false);
   const [newDisciplineName, setNewDisciplineName] = useState("");
   const [newDisciplineColor, setNewDisciplineColor] = useState(PRESET_COLORS[0]);
+  const [isConfirmingDeleteDiscipline, setIsConfirmingDeleteDiscipline] = useState(false);
+  const [isDeletingDiscipline, setIsDeletingDiscipline] = useState(false);
 
   const [periods, setPeriods] = useState<DateRange[]>([{ start: "", end: "" }]);
   const [commentaire, setCommentaire] = useState("");
@@ -59,57 +64,149 @@ export default function LeaveForm({ formateurs, disciplines, onRefreshData, isDa
 
   const handleCreateFormateur = async () => {
     if (!newFormateurName.trim()) return;
-    const res = await fetch("/api/formateurs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nom: newFormateurName.trim(), disciplines: newFormateurDisciplines }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      onRefreshData();
-      setIsAddingFormateur(false);
-      setNewFormateurName("");
-      setNewFormateurDisciplines([]);
-      setSelectedFormateurId(data.id);
-      
-      setSuccessNotification({
-        message: `Le formateur "${data.nom}" a été créé avec succès !`,
-        type: "success"
+    try {
+      const res = await fetch("/api/formateurs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: newFormateurName.trim(), disciplines: newFormateurDisciplines }),
       });
-      setTimeout(() => setSuccessNotification(null), 6000);
-    } else {
+      if (res.ok) {
+        const data = await res.json();
+        onRefreshData();
+        setIsAddingFormateur(false);
+        setNewFormateurName("");
+        setNewFormateurDisciplines([]);
+        setSelectedFormateurId(data.id);
+        
+        setSuccessNotification({
+          message: `Le formateur "${data.nom}" a été créé avec succès !`,
+          type: "success"
+        });
+        setTimeout(() => setSuccessNotification(null), 6000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        console.error("[LeaveForm] Error creating formateur:", data.error || res.statusText);
+        setSuccessNotification({
+          message: data.error || "Une erreur est survenue lors de la création du formateur.",
+          type: "error"
+        });
+      }
+    } catch (err) {
+      console.error("[LeaveForm] Network error creating formateur:", err);
       setSuccessNotification({
-        message: "Une erreur est survenue lors de la création du formateur.",
+        message: "Erreur de connexion au serveur d'API.",
         type: "error"
       });
     }
   };
 
-  const handleCreateDiscipline = async () => {
-    if (!newDisciplineName.trim()) return;
-    const res = await fetch("/api/disciplines", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nom: newDisciplineName.trim(), colorHex: newDisciplineColor }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      onRefreshData();
-      setIsAddingDiscipline(false);
-      setNewDisciplineName("");
-      setNewDisciplineColor(PRESET_COLORS[0]);
-      setSelectedDisciplineId(data.id);
-      
-      setSuccessNotification({
-        message: `La discipline "${data.nom}" a été créée avec succès !`,
-        type: "success"
+  const handleDeleteFormateur = async () => {
+    if (!selectedFormateurId || isDeletingFormateur) return;
+    setIsDeletingFormateur(true);
+    try {
+      const selectedName = formateurs.find(f => f.id === selectedFormateurId)?.nom || "le formateur";
+      const res = await fetch(`/api/formateurs/${selectedFormateurId}`, {
+        method: "DELETE",
       });
-      setTimeout(() => setSuccessNotification(null), 6000);
-    } else {
+      const data = await res.json();
+      if (res.ok) {
+        onRefreshData();
+        setSelectedFormateurId("");
+        setIsConfirmingDeleteFormateur(false);
+        setSuccessNotification({
+          message: data.message || `Le formateur "${selectedName}" et ses congés associés ont été supprimés avec succès !`,
+          type: "success"
+        });
+        setTimeout(() => setSuccessNotification(null), 6000);
+      } else {
+        console.error("[LeaveForm] Error deleting formateur:", data.error || res.statusText);
+        setSuccessNotification({
+          message: data.error || "Une erreur est survenue lors de la suppression.",
+          type: "error"
+        });
+      }
+    } catch (err) {
+      console.error("[LeaveForm] Network error deleting formateur:", err);
       setSuccessNotification({
-        message: "Une erreur est survenue lors de la création de la discipline.",
+        message: "Erreur de connexion au serveur d'API.",
         type: "error"
       });
+    } finally {
+      setIsDeletingFormateur(false);
+    }
+  };
+
+  const handleCreateDiscipline = async () => {
+    if (!newDisciplineName.trim()) return;
+    try {
+      const res = await fetch("/api/disciplines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: newDisciplineName.trim(), colorHex: newDisciplineColor }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onRefreshData();
+        setIsAddingDiscipline(false);
+        setNewDisciplineName("");
+        setNewDisciplineColor(PRESET_COLORS[0]);
+        setSelectedDisciplineId(data.id);
+        
+        setSuccessNotification({
+          message: `La discipline "${data.nom}" a été créée avec succès !`,
+          type: "success"
+        });
+        setTimeout(() => setSuccessNotification(null), 6000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        console.error("[LeaveForm] Error creating discipline:", data.error || res.statusText);
+        setSuccessNotification({
+          message: data.error || "Une erreur est survenue lors de la création de la discipline.",
+          type: "error"
+        });
+      }
+    } catch (err) {
+      console.error("[LeaveForm] Network error creating discipline:", err);
+      setSuccessNotification({
+        message: "Erreur de connexion au serveur d'API.",
+        type: "error"
+      });
+    }
+  };
+
+  const handleDeleteDiscipline = async () => {
+    if (!selectedDisciplineId || isDeletingDiscipline) return;
+    setIsDeletingDiscipline(true);
+    try {
+      const selectedName = disciplines.find(d => d.id === selectedDisciplineId)?.nom || "la discipline";
+      const res = await fetch(`/api/disciplines/${selectedDisciplineId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onRefreshData();
+        setSelectedDisciplineId("");
+        setIsConfirmingDeleteDiscipline(false);
+        setSuccessNotification({
+          message: data.message || `La discipline "${selectedName}" et ses congés associés ont été supprimés avec succès !`,
+          type: "success"
+        });
+        setTimeout(() => setSuccessNotification(null), 6000);
+      } else {
+        console.error("[LeaveForm] Error deleting discipline:", data.error || res.statusText);
+        setSuccessNotification({
+          message: data.error || "Une erreur est survenue lors de la suppression.",
+          type: "error"
+        });
+      }
+    } catch (err) {
+      console.error("[LeaveForm] Network error deleting discipline:", err);
+      setSuccessNotification({
+        message: "Erreur de connexion au serveur d'API.",
+        type: "error"
+      });
+    } finally {
+      setIsDeletingDiscipline(false);
     }
   };
 
@@ -165,9 +262,11 @@ export default function LeaveForm({ formateurs, disciplines, onRefreshData, isDa
         }
         onRefreshData();
       } else {
+        console.error("[LeaveForm] Error creating conges:", data.error || res.statusText);
         setSubmitMessage({ type: "error", text: data.error || "Une erreur est survenue." });
       }
     } catch(err) {
+      console.error("[LeaveForm] Network error creating conges:", err);
       setSubmitMessage({ type: "error", text: "Erreur de connexion au serveur d'API." });
     } finally {
       setIsSubmitting(false);
@@ -297,40 +396,112 @@ export default function LeaveForm({ formateurs, disciplines, onRefreshData, isDa
                       </div>
                     </div>
                   ) : (
-                    <div className="flex gap-2.5 items-center">
-                      <div className="relative flex-1">
-                        <select
-                          value={selectedFormateurId}
-                          onChange={(e) => setSelectedFormateurId(e.target.value)}
-                          className="w-full appearance-none rounded-xl border border-slate-250 dark:border-white/[0.06] bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 dark:text-slate-200 transition-colors duration-300 cursor-pointer"
-                        >
-                          <option value="" disabled>Sélectionner un formateur...</option>
-                          {formateurs.map((f) => (
-                            <option key={f.id} value={f.id}>{f.nom}</option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-                          <Search className="h-4 w-4" />
+                    <div className="space-y-4">
+                      <div className="flex gap-2.5 items-center">
+                        <div className="relative flex-1">
+                          <select
+                            id="formateur-select"
+                            value={selectedFormateurId}
+                            onChange={(e) => {
+                              setSelectedFormateurId(e.target.value);
+                              setIsConfirmingDeleteFormateur(false); // reset delete confirm state on new selection
+                            }}
+                            className="w-full appearance-none rounded-xl border border-slate-250 dark:border-white/[0.06] bg-white dark:bg-slate-900 py-3 pl-4 pr-10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 dark:text-slate-200 transition-colors duration-300 cursor-pointer"
+                          >
+                            <option value="" disabled>Sélectionner un formateur...</option>
+                            {formateurs.map((f) => (
+                              <option key={f.id} value={f.id}>{f.nom}</option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                            <Search className="h-4 w-4" />
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingFormateur(true)}
+                          className="flex items-center justify-center bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 rounded-xl px-4 py-3 text-xs transition font-black border border-slate-205 dark:border-white/[0.04] cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Nouveau
+                        </button>
+                        
+                        {selectedFormateurId && (
+                          <button
+                            type="button"
+                            onClick={() => setIsConfirmingDeleteFormateur(!isConfirmingDeleteFormateur)}
+                            className="flex items-center justify-center bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-xl p-3 border border-red-200/50 dark:border-red-900/30 transition cursor-pointer"
+                            title="Supprimer ce formateur"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingFormateur(true)}
-                        className="flex items-center justify-center bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-900 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 rounded-xl px-4 py-3 text-xs transition font-black border border-slate-205 dark:border-white/[0.04] cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" />
-                        Nouveau
-                      </button>
+
+                      {/* Cascade confirmation warning (A & B) */}
+                      <AnimatePresence>
+                        {isConfirmingDeleteFormateur && selectedFormateurId && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            className="p-4 bg-red-50/80 dark:bg-red-950/15 border border-red-250 dark:border-red-900/40 rounded-2xl space-y-3.5 overflow-hidden"
+                          >
+                            <div className="flex gap-2.5 items-start">
+                              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <div className="text-xs font-black text-red-800 dark:text-red-300 uppercase tracking-wider">
+                                  Attention: Suppression en Cascade
+                                </div>
+                                <p className="text-xs text-red-700 dark:text-red-450 leading-relaxed font-medium">
+                                  Supprimer le formateur <strong>{formateurs.find(f => f.id === selectedFormateurId)?.nom}</strong> retirera définitivement ce formateur et effacera <strong>toutes ses absences planifiées</strong> de la base de données.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2.5 border-t border-red-200/50 dark:border-red-950/40">
+                              <button
+                                type="button"
+                                onClick={() => setIsConfirmingDeleteFormateur(false)}
+                                disabled={isDeletingFormateur}
+                                className="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 px-3.5 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                              >
+                                Annuler
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDeleteFormateur}
+                                disabled={isDeletingFormateur}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
+                              >
+                                {isDeletingFormateur ? "Suppression..." : "Confirmer la suppression"}
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
                 </div>
 
                 {/* Discipline Block */}
                 <div className="space-y-3.5">
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-450 dark:text-slate-500 flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    Discipline concernée
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-455 dark:text-slate-500 flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      Discipline concernée
+                    </label>
+                    {selectedDisciplineId && !isAddingDiscipline && (
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmingDeleteDiscipline(!isConfirmingDeleteDiscipline)}
+                        className="text-red-650 hover:text-red-750 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg border border-transparent hover:border-red-200/40 dark:hover:border-red-900/30 transition-all cursor-pointer flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider"
+                        title="Supprimer cette discipline"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
                   
                   {isAddingDiscipline ? (
                     <div className="space-y-4 p-5 bg-slate-50 dark:bg-slate-950/65 rounded-2xl border border-slate-200/60 dark:border-white/[0.04] transition-all duration-300">
@@ -378,6 +549,48 @@ export default function LeaveForm({ formateurs, disciplines, onRefreshData, isDa
                     </div>
                   ) : (
                     <div className="space-y-3">
+                      {/* Cascade confirmation warning for discipline */}
+                      <AnimatePresence>
+                        {isConfirmingDeleteDiscipline && selectedDisciplineId && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            className="p-4 bg-red-50/80 dark:bg-red-950/15 border border-red-250 dark:border-red-900/40 rounded-2xl space-y-3.5 overflow-hidden my-3"
+                          >
+                            <div className="flex gap-2.5 items-start">
+                              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <div className="text-xs font-black text-red-800 dark:text-red-300 uppercase tracking-wider">
+                                  Attention: Suppression en Cascade
+                                </div>
+                                <p className="text-xs text-red-700 dark:text-red-450 leading-relaxed font-medium">
+                                  Supprimer la discipline <strong>{disciplines.find(d => d.id === selectedDisciplineId)?.nom}</strong> retirera définitivement cette discipline, la désassociera de <strong>tous les formateurs</strong>, et effacera <strong>toutes les indisponibilités associées</strong>.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2.5 border-t border-red-200/50 dark:border-red-950/40">
+                              <button
+                                type="button"
+                                onClick={() => setIsConfirmingDeleteDiscipline(false)}
+                                disabled={isDeletingDiscipline}
+                                className="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 px-3.5 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                              >
+                                Annuler
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDeleteDiscipline}
+                                disabled={isDeletingDiscipline}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-xs"
+                              >
+                                {isDeletingDiscipline ? "Suppression..." : "Confirmer la suppression"}
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
                       <div className="flex flex-wrap gap-2.5">
                         {disciplines.map(d => {
                           const color = d.colorHex || "#6366f1";

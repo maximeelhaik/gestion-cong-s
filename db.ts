@@ -62,11 +62,19 @@ const DEFAULT_CONGES: Conge[] = [
 ];
 
 let isDbInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 async function ensureDbInitialized() {
   if (isDbInitialized) return;
-  await initDb();
-  isDbInitialized = true;
+  if (!initPromise) {
+    initPromise = initDb().then(() => {
+      isDbInitialized = true;
+    }).catch(err => {
+      initPromise = null; // Let future requests retry if it failed
+      throw err;
+    });
+  }
+  await initPromise;
 }
 
 // --- Seed Database if Needed ---
