@@ -91,9 +91,9 @@ def run_tests():
         page.wait_for_selector("text=Nouveau Formateur", timeout=5000)
         page.get_by_placeholder("Ex: Alice Dupont").fill("Jean Testeur")
         
-        # Select "Cybersécurité" and "Développement Web" disciplines for this trainer
+        # Select "Cybersécurité" and "WordPress" disciplines for this trainer
         page.locator("div:has-text('Nouveau Formateur') button:has-text('Cybersécurité')").first.click()
-        page.locator("div:has-text('Nouveau Formateur') button:has-text('Développement Web')").first.click()
+        page.locator("div:has-text('Nouveau Formateur') button:has-text('WordPress')").first.click()
         
         page.locator("button:has-text('Valider')").click()
         page.wait_for_selector("text=Le formateur \"Jean Testeur\" a été créé avec succès !", timeout=5000)
@@ -128,11 +128,11 @@ def run_tests():
         # Wait for form to reset from previous submission
         page.wait_for_function("() => document.getElementById('formateur-select').value === ''")
         
-        # Select another formateur: Marc Lemaire
-        select_elem.select_option(label="Marc Lemaire")
+        # Select another formateur: Line
+        select_elem.select_option(label="Line")
         
-        # Switch discipline to "Développement Web" (first add a leave on Développement Web for Marc)
-        page.locator("button:has-text('Développement Web')").first.click()
+        # Switch discipline to "WordPress" (first add a leave on WordPress for Line)
+        page.locator("button:has-text('WordPress')").first.click()
         page.locator("input[type='date']").first.fill("2026-06-03")
         page.locator("input[type='date']").nth(1).fill("2026-06-08")
         page.get_by_placeholder("Préciser la raison ou des notes complémentaires", exact=False).fill("Vacances scolaires")
@@ -140,11 +140,11 @@ def run_tests():
         
         # Wait for form to reset (indicating successful submission)
         page.wait_for_function("() => document.getElementById('formateur-select').value === ''")
-        print("   ✓ Leave added for Marc Lemaire", flush=True)
+        print("   ✓ Leave added for Line", flush=True)
 
-        # Now add overlapping leave for Jean Testeur on Développement Web
+        # Now add overlapping leave for Jean Testeur on WordPress
         select_elem.select_option(label="Jean Testeur")
-        page.locator("button:has-text('Développement Web')").first.click()
+        page.locator("button:has-text('WordPress')").first.click()
         page.locator("input[type='date']").first.fill("2026-06-05")
         page.locator("input[type='date']").nth(1).fill("2026-06-10")
         page.get_by_placeholder("Préciser la raison ou des notes complémentaires", exact=False).fill("Chevauchement test")
