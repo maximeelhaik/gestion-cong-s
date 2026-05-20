@@ -1,4 +1,4 @@
-import type { Formateur, Discipline, Conge } from "./src/types.ts";
+import type { Formateur, Discipline, Conge } from "./src/types";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -88,6 +88,14 @@ async function kvFetch(command: any[]) {
   return data.result;
 }
 
+let isDbInitialized = false;
+
+async function ensureDbInitialized() {
+  if (isDbInitialized) return;
+  await initDb();
+  isDbInitialized = true;
+}
+
 // --- Seed Database if Needed ---
 export async function initDb() {
   console.log("[DB] Initializing database connection to Upstash Redis...");
@@ -104,33 +112,41 @@ export async function initDb() {
     }
   } catch (err: any) {
     console.error("[DB] Initialization error during Upstash seeding:", err.message);
+    throw err;
   }
 }
 
 // --- Getter and Setter Functions ---
 export async function getFormateurs(): Promise<Formateur[]> {
+  await ensureDbInitialized();
   const res = await kvFetch(["GET", "academy_formateurs"]);
   return res ? JSON.parse(res) : DEFAULT_FORMATEURS;
 }
 
 export async function saveFormateurs(formateurs: Formateur[]): Promise<void> {
+  await ensureDbInitialized();
   await kvFetch(["SET", "academy_formateurs", JSON.stringify(formateurs)]);
 }
 
 export async function getDisciplines(): Promise<Discipline[]> {
+  await ensureDbInitialized();
   const res = await kvFetch(["GET", "academy_disciplines"]);
   return res ? JSON.parse(res) : DEFAULT_DISCIPLINES;
 }
 
 export async function saveDisciplines(disciplines: Discipline[]): Promise<void> {
+  await ensureDbInitialized();
   await kvFetch(["SET", "academy_disciplines", JSON.stringify(disciplines)]);
 }
 
 export async function getConges(): Promise<Conge[]> {
+  await ensureDbInitialized();
   const res = await kvFetch(["GET", "academy_conges"]);
   return res ? JSON.parse(res) : DEFAULT_CONGES;
 }
 
 export async function saveConges(conges: Conge[]): Promise<void> {
+  await ensureDbInitialized();
   await kvFetch(["SET", "academy_conges", JSON.stringify(conges)]);
 }
+

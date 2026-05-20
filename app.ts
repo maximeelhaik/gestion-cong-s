@@ -8,13 +8,12 @@ import {
   saveDisciplines,
   getConges,
   saveConges,
-} from "./db.ts";
+} from "./db";
+
 
 const app = express();
 app.use(express.json());
 
-// Initialize database
-initDb().catch((err) => console.error("[DB Init Error]", err));
 
 // Diagnostic endpoint to check environment variables and test Upstash connection
 app.get("/api/diagnose", async (req, res) => {
