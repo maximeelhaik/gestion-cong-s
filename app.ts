@@ -9,7 +9,7 @@ import {
   saveDisciplines,
   getConges,
   saveConges,
-} from "./db";
+} from "./db.js";
 
 
 const app = express();
